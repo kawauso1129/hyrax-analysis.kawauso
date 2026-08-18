@@ -1,0 +1,781 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HYROXギャップ分析 | 種目パーセンタイル vs 総合パーセンタイル</title>
+<style>
+  :root {
+    /* ---- HYROXブランドカラー（テーマに関わらず固定） ---- */
+    --brand-yellow: #FFE600; /* RGB(255,230,0) */
+    --brand-black:  #141414; /* RGB(20,20,20) */
+    --key-cyan:     #92E6F1; /* RGB(146,230,241) キーカラー */
+    --baseline-axis: var(--brand-yellow);
+    --card-radius: 14px;
+
+    /* ---- 基本テーマ＝HYROXブラック（ダーク） ---- */
+    color-scheme: dark;
+    --surface-1:      #1f1f1e;
+    --page-plane:     #141414;
+    --text-primary:   #ffffff;
+    --text-secondary: #c3c2b7;
+    --text-muted:     #898781;
+    --gridline:       #2c2c2a;
+    --border:         rgba(255,255,255,0.10);
+    --success-text:   #0ca30c;
+
+    --series-blue:    #92E6F1;
+    --series-red:     #e66767;
+    --diverge-mid:    #2c2c2a;
+  }
+  @media (prefers-color-scheme: light) {
+    :root:where(:not([data-theme="dark"])) {
+      color-scheme: light;
+      --surface-1:      #fcfcfb;
+      --page-plane:     #f9f9f7;
+      --text-primary:   #141414;
+      --text-secondary: #52514e;
+      --text-muted:     #898781;
+      --gridline:       #e1e0d9;
+      --border:         rgba(20,20,20,0.10);
+      --success-text:   #006300;
+
+      --series-blue:    #0e7490;
+      --series-red:     #e34948;
+      --diverge-mid:    #f0efec;
+    }
+  }
+  :root[data-theme="light"] {
+    color-scheme: light;
+    --surface-1:      #fcfcfb;
+    --page-plane:     #f9f9f7;
+    --text-primary:   #141414;
+    --text-secondary: #52514e;
+    --text-muted:     #898781;
+    --gridline:       #e1e0d9;
+    --border:         rgba(20,20,20,0.10);
+    --success-text:   #006300;
+
+    --series-blue:    #0e7490;
+    --series-red:     #e34948;
+    --diverge-mid:    #f0efec;
+  }
+
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0;
+    background: var(--page-plane);
+    color: var(--text-primary);
+    font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+  body { padding: 24px 16px 64px; }
+  .wrap { max-width: 880px; margin: 0 auto; }
+
+  header.page-head {
+    display: flex; justify-content: space-between; align-items: flex-start;
+    gap: 16px; margin-bottom: 20px; flex-wrap: wrap;
+  }
+  h1 { font-size: 20px; margin: 0 0 4px; letter-spacing: -0.01em; }
+  .subtitle { color: var(--text-secondary); font-size: 13px; margin: 0; }
+  .theme-toggle {
+    border: 1px solid var(--border); background: var(--surface-1);
+    color: var(--text-secondary); border-radius: 999px; padding: 6px 14px;
+    font-size: 12px; cursor: pointer; white-space: nowrap;
+  }
+  .theme-toggle:hover { color: var(--text-primary); }
+
+  .card {
+    background: var(--surface-1);
+    border: 1px solid var(--border);
+    border-radius: var(--card-radius);
+    padding: 20px;
+    margin-bottom: 16px;
+  }
+  .card h2 {
+    font-size: 13px; font-weight: 600; margin: 0 0 14px;
+    color: var(--text-secondary); text-transform: none;
+  }
+
+  /* ---- input form ---- */
+  .field-grid {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 10px 12px; margin-top: 16px;
+  }
+  .field {
+    display: flex; flex-direction: column; gap: 4px;
+  }
+  .field label { font-size: 11px; color: var(--text-muted); }
+  .field input, .field select {
+    background: var(--page-plane); color: var(--text-primary);
+    border: 1px solid var(--border); border-radius: 8px;
+    padding: 7px 8px; font-size: 13px; width: 100%;
+    font-variant-numeric: tabular-nums;
+  }
+  .field select { cursor: pointer; }
+  .field input:focus, .field select:focus { outline: 2px solid var(--series-blue); outline-offset: 1px; }
+  .field input.field-invalid { border-color: var(--series-red); background: color-mix(in srgb, var(--series-red) 8%, var(--page-plane)); }
+  .input-error {
+    margin-top: 12px; padding: 12px 14px; border-radius: 10px;
+    background: color-mix(in srgb, var(--series-red) 10%, var(--surface-1));
+    border: 1px solid var(--series-red); color: var(--series-red);
+    font-size: 12.5px; line-height: 1.7;
+  }
+  .input-error ul { margin: 4px 0 0; padding-left: 18px; }
+  .form-actions { margin-top: 16px; display: flex; gap: 16px; align-items: center; flex-wrap: wrap; }
+  .toggle-label { display: flex; align-items: center; gap: 6px; font-size: 12.5px; color: var(--text-secondary); cursor: pointer; }
+  .toggle-label input { cursor: pointer; }
+
+  /* ---- overview card ---- */
+  .section-title { font-size: 13px; font-weight: 600; color: var(--text-secondary); margin: 0 0 8px; }
+  .overview-text { font-size: 13.5px; color: var(--text-primary); line-height: 1.8; margin: 0 0 14px; }
+  .text-link { color: var(--series-blue); text-decoration: underline; text-underline-offset: 2px; }
+  .text-link:hover { text-decoration: none; }
+
+  /* ---- phase / tabs ---- */
+  .phase-title { font-size: 15px; font-weight: 700; color: var(--text-primary); margin: 0 0 16px; }
+  .tab-row { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; }
+  .tab-btn {
+    background: var(--page-plane); color: var(--text-secondary);
+    border: 1px solid var(--border); border-radius: 999px;
+    padding: 8px 16px; font-size: 12.5px; font-weight: 600; cursor: pointer;
+  }
+  .tab-btn.active { background: var(--brand-yellow); color: var(--brand-black); border-color: var(--brand-yellow); }
+  .tab-btn-disabled { opacity: 0.55; }
+  .tab-btn-disabled.active { background: var(--text-muted); border-color: var(--text-muted); }
+  .tab-panel { margin-bottom: 16px; }
+  .tab-note { font-size: 12.5px; color: var(--text-secondary); line-height: 1.7; margin: 0 0 12px; }
+
+  /* ---- upload area ---- */
+  .upload-area { display: flex; flex-direction: column; gap: 12px; }
+  .upload-btn {
+    display: inline-block; align-self: flex-start;
+    background: var(--page-plane); color: var(--text-primary);
+    border: 1px dashed var(--baseline-axis); border-radius: 10px;
+    padding: 10px 18px; font-size: 13px; cursor: pointer;
+  }
+  .upload-btn:hover { border-color: var(--series-blue); color: var(--series-blue); }
+  .upload-preview { display: flex; flex-wrap: wrap; gap: 10px; }
+  .upload-thumb { position: relative; width: 140px; }
+  .upload-thumb img {
+    width: 140px; height: 100px; object-fit: cover; border-radius: 8px;
+    border: 1px solid var(--border); display: block;
+  }
+  .upload-thumb .remove-btn {
+    position: absolute; top: -6px; right: -6px; width: 20px; height: 20px;
+    border-radius: 999px; background: var(--series-red); color: #fff; border: none;
+    font-size: 12px; line-height: 20px; text-align: center; cursor: pointer; padding: 0;
+  }
+  .btn-primary {
+    background: var(--brand-yellow); color: var(--brand-black); border: none;
+    border-radius: 8px; padding: 9px 18px; font-size: 13px; font-weight: 700;
+    cursor: pointer;
+  }
+  .btn-primary:hover { filter: brightness(0.95); }
+  .form-note { font-size: 11px; color: var(--text-muted); }
+
+  /* ---- stat tiles ---- */
+  .stat-row {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 12px; margin-bottom: 16px;
+  }
+  .stat-tile {
+    background: var(--surface-1); border: 1px solid var(--border);
+    border-radius: var(--card-radius); padding: 18px 20px;
+  }
+  .stat-label { font-size: 12px; color: var(--text-secondary); margin-bottom: 8px; }
+  .stat-value { font-size: 30px; font-weight: 600; line-height: 1.1; }
+  .stat-sub { font-size: 12px; color: var(--text-muted); margin-top: 6px; }
+  .stat-value.good { color: var(--success-text); }
+
+  /* ---- highlight cards ---- */
+  .highlight-row {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px;
+  }
+  @media (max-width: 520px) { .highlight-row { grid-template-columns: 1fr; } }
+  .hl-card {
+    border-radius: var(--card-radius); padding: 16px 18px; border: 1px solid var(--border);
+  }
+  .hl-card.strong { background: color-mix(in srgb, var(--series-blue) 10%, var(--surface-1)); }
+  .hl-card.weak   { background: color-mix(in srgb, var(--series-red) 10%, var(--surface-1)); }
+  .hl-tag { font-size: 11px; color: var(--text-muted); margin-bottom: 4px; }
+  .hl-name { font-size: 17px; font-weight: 600; margin-bottom: 2px; }
+  .hl-detail { font-size: 12px; color: var(--text-secondary); }
+
+  /* ---- insight text ---- */
+  #insight-text p { font-size: 13.5px; line-height: 1.8; color: var(--text-primary); margin: 0 0 10px; }
+  #insight-text p:last-child { margin-bottom: 0; }
+  #insight-text p.insight-caveat { font-size: 12px; color: var(--text-muted); line-height: 1.7; }
+
+  /* ---- chart ---- */
+  .chart-legend {
+    display: flex; gap: 18px; font-size: 12px; color: var(--text-secondary);
+    margin-bottom: 14px; flex-wrap: wrap;
+  }
+  .legend-item { display: flex; align-items: center; gap: 6px; }
+  .swatch { width: 10px; height: 10px; border-radius: 2px; display: inline-block; }
+  #chart-svg { width: 100%; height: auto; overflow: visible; }
+  .bar-label { font-size: 12px; fill: var(--text-primary); font-weight: 500; }
+  .bar-value { font-size: 12px; fill: var(--text-secondary); font-variant-numeric: tabular-nums; }
+  .axis-text { font-size: 10px; fill: var(--text-muted); }
+  .gridline { stroke: var(--gridline); stroke-width: 1; }
+  .baseline-line { stroke: var(--baseline-axis); stroke-width: 2; stroke-dasharray: 3 3; }
+  .baseline-tag { font-size: 10px; fill: var(--text-secondary); }
+  .bar-rect { cursor: pointer; }
+
+  .tooltip {
+    position: fixed; pointer-events: none; z-index: 50;
+    background: var(--text-primary); color: var(--surface-1);
+    font-size: 12px; padding: 6px 10px; border-radius: 6px;
+    opacity: 0; transition: opacity .1s; white-space: nowrap;
+  }
+
+  /* ---- table view ---- */
+  table.data-table {
+    width: 100%; border-collapse: collapse; font-size: 12.5px;
+    font-variant-numeric: tabular-nums;
+  }
+  table.data-table th, table.data-table td {
+    text-align: right; padding: 7px 8px; border-bottom: 1px solid var(--gridline);
+  }
+  table.data-table th:first-child, table.data-table td:first-child { text-align: left; }
+  table.data-table th {
+    color: var(--text-muted); font-weight: 500; font-size: 11px;
+  }
+  table.data-table td.diff-pos { color: var(--success-text); font-weight: 600; }
+  table.data-table td.diff-neg { color: var(--series-red); font-weight: 600; }
+
+  footer.note {
+    font-size: 11.5px; color: var(--text-muted); line-height: 1.7; margin-top: 24px;
+  }
+
+  /* ---- print / PDF出力 ---- */
+  @media print {
+    @page {
+      size: A4;
+      margin: 14mm 12mm;
+    }
+    html, body {
+      background: #fff;
+      padding: 0;
+      margin: 0;
+    }
+    .wrap {
+      max-width: 100%;
+      margin: 0;
+    }
+    .theme-toggle,
+    .upload-btn,
+    .upload-preview,
+    #proceed-btn,
+    .tab-row,
+    .form-actions {
+      display: none !important;
+    }
+    /* カード・グラフ・表がページの途中で分断されないようにする */
+    .card,
+    .stat-tile,
+    .hl-card,
+    .stat-row,
+    .highlight-row,
+    #chart-svg,
+    table.data-table tr,
+    #insight-text p {
+      break-inside: avoid;
+      page-break-inside: avoid;
+    }
+    .card {
+      border: 1px solid #ddd;
+      box-shadow: none;
+      margin-bottom: 10px;
+      padding: 14px 16px;
+    }
+    table.data-table thead {
+      display: table-header-group;
+    }
+    table.data-table {
+      font-size: 11px;
+    }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="page-head">
+    <div>
+      <h1>HYROXギャップ分析</h1>
+      <p class="subtitle" id="race-subtitle">総合順位と種目パーセンタイルのギャップを見る、自分専用の診断ビュー</p>
+    </div>
+    <button class="theme-toggle" id="theme-toggle" type="button">🌓 ダークモード切替</button>
+  </header>
+
+  <div class="card">
+    <h2 class="section-title">ツール概要</h2>
+    <p class="overview-text">HYROXの結果から、総合順位と種目パーセンタイルのギャップを見える化する、自分専用の診断ツールです。種目ごとの得意・不得意と、それが総合順位にどう効いているかを一目で確認できます。</p>
+    <h2 class="section-title" style="margin-top:16px;">使い方（ざっくり）</h2>
+    <p class="overview-text"><a class="text-link" href="https://www.hyresult.com/event/s9-2026-chiba" target="_blank" rel="noopener noreferrer">hyresult.com</a>の自分の結果ページで、総合・ラン合計・8種目・Roxzoneそれぞれの順位（#◯ of ◯◯◯）を確認し、下の「①情報入力」で数値を入力してください。自動で「②ギャップ分析結果」に反映されます。（スクリーンショットのアップロードで入力完結できるパターンBは現在開発中です）</p>
+    <button class="btn-primary" id="proceed-btn" type="button">① 情報入力に進む ↓</button>
+  </div>
+
+  <div class="card" id="input-phase">
+    <h2 class="phase-title">① 情報入力</h2>
+    <div class="tab-row">
+      <button class="tab-btn active" id="tab-btn-a" type="button">パターンA：数値を入力する</button>
+      <button class="tab-btn tab-btn-disabled" id="tab-btn-b" type="button">パターンB：スクショをアップする（Coming Soon）</button>
+    </div>
+
+    <div class="tab-panel" id="tab-panel-b" hidden>
+      <p class="tab-note">スクリーンショットのアップロードで入力完結できるパターンBは現在開発中です（Coming Soon）。今しばらくはパターンA（数値を入力する）をご利用ください。</p>
+    </div>
+
+
+    <h3 class="section-title" style="margin-top:0;">大会情報</h3>
+    <div class="field-grid">
+        <div class="field"><label>大会名</label><input type="text" id="f-race-name" value="HYROX Chiba 2026"></div>
+        <div class="field">
+          <label>カテゴリ名</label>
+          <select id="f-category">
+            <option value="HYROX MEN" data-pop="1992">HYROX MEN</option>
+            <option value="HYROX WOMEN" data-pop="803">HYROX WOMEN</option>
+            <option value="HYROX DOUBLES MEN" data-pop="1252">HYROX DOUBLES MEN</option>
+            <option value="HYROX DOUBLES WOMEN" data-pop="680" selected>HYROX DOUBLES WOMEN</option>
+            <option value="HYROX DOUBLES MIXED" data-pop="1134">HYROX DOUBLES MIXED</option>
+            <option value="HYROX PRO MEN" data-pop="295">HYROX PRO MEN</option>
+            <option value="HYROX PRO WOMEN" data-pop="94">HYROX PRO WOMEN</option>
+            <option value="HYROX PRO DOUBLES MEN" data-pop="156">HYROX PRO DOUBLES MEN</option>
+            <option value="HYROX PRO DOUBLES WOMEN" data-pop="77">HYROX PRO DOUBLES WOMEN</option>
+            <option value="HYROX TEAM RELAY MEN" data-pop="106">HYROX TEAM RELAY MEN</option>
+            <option value="HYROX TEAM RELAY WOMEN" data-pop="84">HYROX TEAM RELAY WOMEN</option>
+            <option value="HYROX TEAM RELAY MIXED" data-pop="141">HYROX TEAM RELAY MIXED</option>
+            <option value="HYROX ADAPTIVE MEN" data-pop="16">HYROX ADAPTIVE MEN</option>
+            <option value="HYROX ADAPTIVE WOMEN" data-pop="7">HYROX ADAPTIVE WOMEN</option>
+          </select>
+        </div>
+        <div class="field"><label>母集団人数（例: 680 ／ カテゴリ選択で自動入力）</label><input type="text" inputmode="numeric" autocomplete="off" id="f-pop" value="680"></div>
+        <div class="field"><label>総合順位（Total）</label><input type="text" inputmode="numeric" autocomplete="off" id="f-total" value="175"></div>
+    </div>
+
+    <h3 class="section-title" style="margin-top:16px;">種目別順位</h3>
+    <div class="field-grid">
+        <div class="field"><label>ラン合計（Runs）順位</label><input type="text" inputmode="numeric" autocomplete="off" id="f-runs" value="205"></div>
+        <div class="field"><label>SkiErg 順位</label><input type="text" inputmode="numeric" autocomplete="off" id="f-skierg" value="113"></div>
+        <div class="field"><label>Sled Push 順位</label><input type="text" inputmode="numeric" autocomplete="off" id="f-sledpush" value="457"></div>
+        <div class="field"><label>Sled Pull 順位</label><input type="text" inputmode="numeric" autocomplete="off" id="f-sledpull" value="59"></div>
+        <div class="field"><label>Burpee Broad Jump 順位</label><input type="text" inputmode="numeric" autocomplete="off" id="f-bbj" value="284"></div>
+        <div class="field"><label>Row 順位</label><input type="text" inputmode="numeric" autocomplete="off" id="f-row" value="280"></div>
+        <div class="field"><label>Farmers Carry 順位</label><input type="text" inputmode="numeric" autocomplete="off" id="f-fc" value="263"></div>
+        <div class="field"><label>Sandbag Lunges 順位</label><input type="text" inputmode="numeric" autocomplete="off" id="f-sl" value="172"></div>
+        <div class="field"><label>Wall Balls 順位</label><input type="text" inputmode="numeric" autocomplete="off" id="f-wb" value="318"></div>
+        <div class="field"><label>Roxzone 順位</label><input type="text" inputmode="numeric" autocomplete="off" id="f-roxzone" value="203"></div>
+    </div>
+    <div class="form-actions">
+      <button class="btn-primary" id="recalc-btn" type="button">分析する</button>
+      <label class="toggle-label"><input type="checkbox" id="f-include-roxzone">種目平均にRoxzoneも含める（10項目で計算）</label>
+    </div>
+    <div class="form-note" style="margin-top:8px;">全て「#◯ of 680」の◯の部分（数字が小さいほど良い順位・半角数字のみ）</div>
+    <div class="input-error" id="input-error" hidden></div>
+  </div>
+
+  <h2 class="phase-title" id="result-phase">② ギャップ分析結果</h2>
+
+  <div class="stat-row">
+    <div class="stat-tile">
+      <div class="stat-label">総合順位</div>
+      <div class="stat-value" id="stat-total-value">—</div>
+      <div class="stat-sub" id="stat-total-sub">—</div>
+    </div>
+    <div class="stat-tile">
+      <div class="stat-label" id="stat-avg-label">種目平均パーセンタイル（ラン合計+8種目）</div>
+      <div class="stat-value" id="stat-avg-value">—</div>
+      <div class="stat-sub" id="stat-avg-sub">9項目の単純平均</div>
+    </div>
+    <div class="stat-tile">
+      <div class="stat-label">ギャップ（種目平均 − 総合）</div>
+      <div class="stat-value" id="stat-gap-value">—</div>
+      <div class="stat-sub" id="stat-gap-sub">—</div>
+    </div>
+  </div>
+
+  <div class="highlight-row">
+    <div class="hl-card strong">
+      <div class="hl-tag">最強種目</div>
+      <div class="hl-name" id="hl-strong-name">—</div>
+      <div class="hl-detail" id="hl-strong-detail">—</div>
+    </div>
+    <div class="hl-card weak">
+      <div class="hl-tag">最弱種目（＝伸びしろ）</div>
+      <div class="hl-name" id="hl-weak-name">—</div>
+      <div class="hl-detail" id="hl-weak-detail">—</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>ギャップの考察</h2>
+    <div id="insight-text"></div>
+  </div>
+
+  <div class="card">
+    <h2>種目別パーセンタイル（総合順位を基準線に）</h2>
+    <div class="chart-legend">
+      <span class="legend-item"><span class="swatch" style="background:var(--series-blue)"></span>総合順位より強い項目</span>
+      <span class="legend-item"><span class="swatch" style="background:var(--series-red)"></span>総合順位より弱い項目</span>
+      <span class="legend-item">┄ 総合順位のパーセンタイル（基準線）</span>
+    </div>
+    <svg id="chart-svg" viewBox="0 0 760 420"></svg>
+  </div>
+
+  <div class="card">
+    <h2>データテーブル</h2>
+    <table class="data-table" id="data-table">
+      <thead>
+        <tr><th>項目</th><th>順位</th><th>パーセンタイル</th><th>総合に対する強み/弱み</th></tr>
+      </thead>
+      <tbody id="data-table-body"></tbody>
+    </table>
+  </div>
+
+  <footer class="note">
+    パーセンタイルは「順位 ÷ 母集団人数 × 100」で単純計算しています（hyresult.com上に表示される統計的な「top X%」とは値が異なります）。<br>
+    「総合に対する強み/弱み」は「総合パーセンタイル − 種目パーセンタイル」。＋（青）は総合順位より順位が良い項目、－（赤）は総合順位より順位が悪い項目です。<br>
+    上部のギャップ（種目平均 − 総合）がプラスのときは、種目単体の順位以上に総合順位が良い＝際立った弱点がない「谷の浅さ」で得をしている状態です。マイナスのときは、種目単体は悪くないのに総合では損をしている状態です。<br>
+    ただしパーセンタイルは「何番目に速いか」という順位の情報のみで、タイム差の大きさ（何秒速い/遅いか）は反映していません。総合順位は実際には合計タイムで決まるため、ここでの強み/弱みは目安として見てください。
+  </footer>
+
+</div>
+
+<div class="tooltip" id="tooltip"></div>
+
+<script>
+(function () {
+  const STATIONS = [
+    { key: 'skierg',   name: 'SkiErg',           id: 'f-skierg' },
+    { key: 'sledpush', name: 'Sled Push',         id: 'f-sledpush' },
+    { key: 'sledpull', name: 'Sled Pull',         id: 'f-sledpull' },
+    { key: 'bbj',      name: 'Burpee Broad Jump', id: 'f-bbj' },
+    { key: 'row',      name: 'Row',               id: 'f-row' },
+    { key: 'fc',       name: 'Farmers Carry',     id: 'f-fc' },
+    { key: 'sl',       name: 'Sandbag Lunges',    id: 'f-sl' },
+    { key: 'wb',       name: 'Wall Balls',        id: 'f-wb' },
+  ];
+  const RUN_ITEM = { key: 'runs', name: 'ラン合計（8本）', id: 'f-runs' };
+  const ROXZONE_ITEM = { key: 'roxzone', name: 'Roxzone', id: 'f-roxzone' };
+
+  const $ = (id) => document.getElementById(id);
+  const tooltip = $('tooltip');
+
+  function fmtPct(p) { return p.toFixed(1) + '%'; }
+
+  // ---- 半角数字への正規化（全角数字が入力された場合も自動で半角化する）----
+  function toHalfWidthDigits(str) {
+    return str.replace(/[０-９]/g, (ch) => String.fromCharCode(ch.charCodeAt(0) - 0xFEE0));
+  }
+  function sanitizeNumericValue(str) {
+    return toHalfWidthDigits(str).replace(/[^0-9]/g, '');
+  }
+
+  function readInputs() {
+    const pop = Number($('f-pop').value);
+    const total = Number($('f-total').value);
+    const includeRoxzone = $('f-include-roxzone').checked;
+    const items = [
+      { ...RUN_ITEM, rank: Number($('f-runs').value) },
+      { ...STATIONS[0], rank: Number($('f-skierg').value) },
+      { ...STATIONS[1], rank: Number($('f-sledpush').value) },
+      { ...STATIONS[2], rank: Number($('f-sledpull').value) },
+      { ...STATIONS[3], rank: Number($('f-bbj').value) },
+      { ...STATIONS[4], rank: Number($('f-row').value) },
+      { ...STATIONS[5], rank: Number($('f-fc').value) },
+      { ...STATIONS[6], rank: Number($('f-sl').value) },
+      { ...STATIONS[7], rank: Number($('f-wb').value) },
+    ];
+    if (includeRoxzone) {
+      items.push({ ...ROXZONE_ITEM, rank: Number($('f-roxzone').value) });
+    }
+    $('race-subtitle').textContent = ($('f-race-name').value || 'HYROX') + ' の記録をもとにした、種目パーセンタイルと総合パーセンタイルのギャップ分析';
+    return { pop, total, items, includeRoxzone };
+  }
+
+  // ---- 入力バリデーション：順位が1未満、または母集団人数を超えていないか ----
+  function validateInputs(raw) {
+    const errors = [];
+    const invalidIds = [];
+    const popOk = Number.isFinite(raw.pop) && raw.pop > 0;
+    if (!popOk) {
+      errors.push('母集団人数は1以上の半角数字で入力してください。');
+      invalidIds.push('f-pop');
+    }
+    const checkRank = (label, id, rank) => {
+      if (!Number.isFinite(rank) || rank < 1) {
+        errors.push(label + 'の順位に1以上の半角数字を入力してください。');
+        invalidIds.push(id);
+      } else if (popOk && rank > raw.pop) {
+        errors.push(label + 'の順位（#' + rank + '）が母集団人数（' + raw.pop + '）を超えています。');
+        invalidIds.push(id);
+      }
+    };
+    checkRank('総合順位', 'f-total', raw.total);
+    raw.items.forEach((it) => checkRank(it.name, it.id, it.rank));
+    return { errors, invalidIds };
+  }
+
+  function showInputError(errors) {
+    const box = $('input-error');
+    box.innerHTML = '<strong>入力内容を確認してください（順位は1〜母集団人数の範囲・半角数字で入力）</strong><ul>' +
+      errors.map((e) => '<li>' + e + '</li>').join('') + '</ul>';
+    box.hidden = false;
+  }
+  function hideInputError() {
+    $('input-error').hidden = true;
+  }
+
+  function compute(raw) {
+    const { pop, total, items, includeRoxzone } = raw;
+    const totalPct = (total / pop) * 100;
+    const withPct = items.map(it => ({ ...it, pct: (it.rank / pop) * 100 }));
+    const avgPct = withPct.reduce((s, it) => s + it.pct, 0) / withPct.length;
+    const gap = avgPct - totalPct;
+    const sorted = [...withPct].sort((a, b) => a.pct - b.pct);
+    const strongest = sorted[0];
+    const weakest = sorted[sorted.length - 1];
+    return { pop, total, totalPct, items: withPct, avgPct, gap, strongest, weakest, includeRoxzone };
+  }
+
+  function renderStats(d) {
+    $('stat-total-value').textContent = '#' + d.total + ' / ' + d.pop;
+    $('stat-total-sub').textContent = '上位 ' + fmtPct(d.totalPct);
+
+    $('stat-avg-value').textContent = fmtPct(d.avgPct);
+    const n = d.items.length;
+    $('stat-avg-label').textContent = d.includeRoxzone
+      ? '種目平均パーセンタイル（ラン合計+8種目+Roxzone）'
+      : '種目平均パーセンタイル（ラン合計+8種目）';
+    $('stat-avg-sub').textContent = n + '項目の単純平均' + (d.includeRoxzone ? '（Roxzone含む）' : '');
+
+    const gapEl = $('stat-gap-value');
+    const sign = d.gap >= 0 ? '+' : '';
+    gapEl.textContent = sign + d.gap.toFixed(1) + 'pt';
+    gapEl.classList.toggle('good', d.gap >= 0);
+    $('stat-gap-sub').textContent = d.gap >= 0
+      ? '谷の浅さで総合順位が得をしています'
+      : '種目単体は悪くないのに総合で損をしています';
+
+    $('hl-strong-name').textContent = d.strongest.name;
+    $('hl-strong-detail').textContent = '#' + d.strongest.rank + ' / ' + d.pop + '（上位 ' + fmtPct(d.strongest.pct) + '）';
+    $('hl-weak-name').textContent = d.weakest.name;
+    $('hl-weak-detail').textContent = '#' + d.weakest.rank + ' / ' + d.pop + '（上位 ' + fmtPct(d.weakest.pct) + '）';
+  }
+
+  // HYROX Chiba 2026 DB WOMEN、680組全件のランキングを実際に集計して得た
+  // 「隣接順位間の秒差」の帯構造（本人が全7ページを目視で確認・集計した実測値）。
+  // この帯データは当該680組フィールド固有の実測ファクトであり、母集団人数が680以外の場合は適用しない。
+  const CHIBA680_DENSITY_BANDS = [
+    { max: 10,  label: '1〜10位',    secPerRank: '100秒以上', density: '先頭はスカスカ' },
+    { max: 100, label: '10〜100位',  secPerRank: '数秒〜数十秒', density: '徐々に密集' },
+    { max: 500, label: '100〜500位', secPerRank: '約2〜4秒',   density: '極端な団子状態' },
+    { max: 600, label: '500〜600位', secPerRank: '約6.6秒',    density: '裾が広がり始める' },
+    { max: Infinity, label: '600位以降', secPerRank: 'さらに拡大', density: '長い尾' },
+  ];
+  function findDensityBand(rank) {
+    return CHIBA680_DENSITY_BANDS.find(b => rank <= b.max);
+  }
+
+  function buildInsight(d) {
+    const weakCount = d.items.filter(it => it.pct > d.totalPct).length;
+    const gap = d.gap;
+    const absGap = Math.abs(gap);
+    const magnitude = absGap < 3 ? 'ほぼ同水準です' : (absGap < 10 ? 'やや良い結果です' : '大きく良い結果です');
+    const magnitudeNeg = absGap < 3 ? 'ほぼ同水準です' : (absGap < 10 ? 'やや悪い結果です' : '大きく悪い結果です');
+    const isChiba680Field = d.pop === 680;
+    const paras = [];
+
+    if (gap >= 3) {
+      paras.push(
+        '総合順位（上位' + fmtPct(d.totalPct) + '）は、種目平均（上位' + fmtPct(d.avgPct) + '）より' + magnitude +
+        '（+' + gap.toFixed(1) + 'pt）。9項目中' + weakCount + '項目は総合順位より順位が低いものの、総合タイムでは順位の見た目以上に得をしている状態です。'
+      );
+      paras.push(
+        '最強は' + d.strongest.name + '（上位' + fmtPct(d.strongest.pct) + '）、最弱は' + d.weakest.name +
+        '（上位' + fmtPct(d.weakest.pct) + '）でした。'
+      );
+      if (isChiba680Field) {
+        const band = findDensityBand(d.total);
+        paras.push(
+          'HYROX Chiba 2026 DB Womenの680組全件のランキングを実際に集計すると、30位前後から500位前後まで（全体の約7割）は隣接順位との差がわずか数秒という極端な団子状態になっています。総合' + d.total +
+          '位は「' + band.label + '」帯（隣接順位差 目安' + band.secPerRank + '）に位置し、' + band.density + 'のゾーンです。総合タイムはラン合計＋8種目の9区間を合算した値のため、ある1区間でその日のペース配分やトランジションの僅かなロスがあっても他の区間と打ち消し合いやすく、単一種目の順位よりノイズが平均化されて安定しやすい構造です。一方、種目単体の順位はこの団子状態の影響を受けやすく、わずか数秒のブレで数十位動くこともあるため、種目パーセンタイルより総合パーセンタイルが良く見えやすい一因と考えられます。'
+        );
+        paras.push(
+          '※ これは680組の実測データ（順位ごとのタイム差）から確認した、この大会・カテゴリの母集団分布に由来する構造的な仮説です。「谷が浅い（弱点がない）」といった個人の特性の物語ではありません。ただし種目別パーセンタイルの標準偏差を用いたt検定ではp≈0.06〜0.12にとどまり、統計的に完全に有意とまでは言えず、9項目という少ないサンプル数の中で見えている傾向という点には留意してください。'
+        );
+      } else {
+        paras.push(
+          '総合タイムは複数種目の合算値であるため、単一種目の順位よりも日々のブレが平均化されて安定しやすい傾向があります。この母集団の順位ごとのタイム差（団子度合い）を確認できれば、この傾向がどの順位帯で強く出ているかをより正確に把握できます。※ 統計的に証明された効果ではなく、傾向としての仮説です。'
+        );
+      }
+    } else if (gap <= -3) {
+      paras.push(
+        '総合順位（上位' + fmtPct(d.totalPct) + '）は、種目平均（上位' + fmtPct(d.avgPct) + '）より' + magnitudeNeg +
+        '（' + gap.toFixed(1) + 'pt）。種目単体では悪くない項目が多いものの、総合では順位を落としています。'
+      );
+      paras.push(
+        '特に' + d.weakest.name + '（上位' + fmtPct(d.weakest.pct) + '）のタイムロスが、総合順位の重しになっている可能性があります。'
+      );
+      paras.push('※ この見立ては順位（パーセンタイル）から読み取れる傾向を言葉にした仮説であり、統計的に証明されたものではありません。パーセンタイルはタイム差の大きさを反映しないため、確度を高めるには近い順位の選手データとの比較が必要です。');
+    } else {
+      paras.push(
+        '総合順位（上位' + fmtPct(d.totalPct) + '）と種目平均（上位' + fmtPct(d.avgPct) + '）は' + magnitude +
+        '。際立った強み・弱みのパターンは見られません。'
+      );
+      paras.push('※ この見立ては順位（パーセンタイル）から読み取れる傾向を言葉にした仮説であり、統計的に証明されたものではありません。パーセンタイルはタイム差の大きさを反映しないため、確度を高めるには近い順位の選手データとの比較が必要です。');
+    }
+
+    return paras.map((p, i) => '<p' + (i === paras.length - 1 ? ' class="insight-caveat"' : '') + '>' + p + '</p>').join('');
+  }
+
+  function renderTable(d) {
+    const rows = [...d.items].sort((a, b) => a.pct - b.pct).map(it => {
+      // 正の値 = 総合より順位が良い（強み・青）／ 負の値 = 総合より順位が悪い（弱み・赤）
+      const diff = d.totalPct - it.pct;
+      const cls = diff >= 0 ? 'diff-pos' : 'diff-neg';
+      const diffStr = (diff >= 0 ? '+' : '') + diff.toFixed(1) + 'pt';
+      return '<tr><td>' + it.name + '</td><td>#' + it.rank + ' / ' + d.pop + '</td><td>' + fmtPct(it.pct) + '</td><td class="' + cls + '">' + diffStr + '</td></tr>';
+    }).join('');
+    $('data-table-body').innerHTML = rows;
+  }
+
+  function renderChart(d) {
+    const svg = $('chart-svg');
+    const W = 760, H = 420;
+    const marginLeft = 150, marginRight = 60, marginTop = 12, marginBottom = 28;
+    const plotW = W - marginLeft - marginRight;
+    const plotH = H - marginTop - marginBottom;
+    const items = [...d.items].sort((a, b) => a.pct - b.pct);
+    const n = items.length;
+    const barThickness = Math.min(24, plotH / n - 8);
+    const rowH = plotH / n;
+    const xScale = (pct) => marginLeft + (pct / 100) * plotW;
+
+    let svgParts = [];
+
+    // gridlines every 25%
+    [0, 25, 50, 75, 100].forEach(g => {
+      const x = xScale(g);
+      svgParts.push('<line class="gridline" x1="' + x + '" y1="' + marginTop + '" x2="' + x + '" y2="' + (marginTop + plotH) + '"/>');
+      svgParts.push('<text class="axis-text" x="' + x + '" y="' + (marginTop + plotH + 16) + '" text-anchor="middle">' + g + '%</text>');
+    });
+
+    // baseline (total percentile)
+    const baseX = xScale(d.totalPct);
+    svgParts.push('<line class="baseline-line" x1="' + baseX + '" y1="' + marginTop + '" x2="' + baseX + '" y2="' + (marginTop + plotH) + '"/>');
+    svgParts.push('<text class="baseline-tag" x="' + baseX + '" y="' + (marginTop - 2) + '" text-anchor="middle">総合 ' + fmtPct(d.totalPct) + '</text>');
+
+    items.forEach((it, i) => {
+      const rowY = marginTop + i * rowH;
+      const barY = rowY + (rowH - barThickness) / 2;
+      const x0 = Math.min(baseX, xScale(it.pct));
+      const x1 = Math.max(baseX, xScale(it.pct));
+      const w = Math.max(1, x1 - x0 - 2); // 2px surface gap from baseline
+      const color = it.pct <= d.totalPct ? 'var(--series-blue)' : 'var(--series-red)';
+      const barX = it.pct <= d.totalPct ? x0 : x0 + 2;
+
+      svgParts.push(
+        '<rect class="bar-rect" data-name="' + it.name + '" data-rank="' + it.rank + '" data-pct="' + it.pct.toFixed(1) + '" ' +
+        'x="' + barX + '" y="' + barY + '" width="' + w + '" height="' + barThickness + '" rx="4" fill="' + color + '"></rect>'
+      );
+      svgParts.push('<text class="bar-label" x="' + (marginLeft - 10) + '" y="' + (rowY + rowH / 2 + 4) + '" text-anchor="end">' + it.name + '</text>');
+
+      const labelX = it.pct <= d.totalPct ? x0 - 6 : x1 + 6;
+      const anchor = it.pct <= d.totalPct ? 'end' : 'start';
+      svgParts.push('<text class="bar-value" x="' + labelX + '" y="' + (rowY + rowH / 2 + 4) + '" text-anchor="' + anchor + '">' + fmtPct(it.pct) + '</text>');
+    });
+
+    svg.innerHTML = svgParts.join('');
+
+    svg.querySelectorAll('.bar-rect').forEach(rect => {
+      rect.addEventListener('mousemove', (e) => {
+        tooltip.style.opacity = '1';
+        tooltip.style.left = (e.clientX + 12) + 'px';
+        tooltip.style.top = (e.clientY + 12) + 'px';
+        tooltip.textContent = rect.dataset.name + '：#' + rect.dataset.rank + ' / ' + d.pop + '（上位 ' + rect.dataset.pct + '%）';
+      });
+      rect.addEventListener('mouseleave', () => { tooltip.style.opacity = '0'; });
+    });
+  }
+
+  function renderAll() {
+    const raw = readInputs();
+    document.querySelectorAll('.field-invalid').forEach((el) => el.classList.remove('field-invalid'));
+    const { errors, invalidIds } = validateInputs(raw);
+    if (errors.length) {
+      invalidIds.forEach((id) => { const el = $(id); if (el) el.classList.add('field-invalid'); });
+      showInputError(errors);
+      return;
+    }
+    hideInputError();
+    const d = compute(raw);
+    renderStats(d);
+    $('insight-text').innerHTML = buildInsight(d);
+    renderTable(d);
+    renderChart(d);
+  }
+
+  $('recalc-btn').addEventListener('click', renderAll);
+  $('f-include-roxzone').addEventListener('change', renderAll);
+  document.querySelectorAll('.field input').forEach(inp => {
+    inp.addEventListener('keydown', (e) => { if (e.key === 'Enter') renderAll(); });
+  });
+
+  // ---- 順位・母集団人数の入力欄は半角数字のみに正規化する（全角入力も自動変換） ----
+  const NUMERIC_FIELD_IDS = ['f-pop', 'f-total', 'f-runs', 'f-skierg', 'f-sledpush', 'f-sledpull', 'f-bbj', 'f-row', 'f-fc', 'f-sl', 'f-wb', 'f-roxzone'];
+  NUMERIC_FIELD_IDS.forEach((id) => {
+    const el = $(id);
+    el.addEventListener('input', () => {
+      const normalized = sanitizeNumericValue(el.value);
+      if (el.value !== normalized) el.value = normalized;
+    });
+  });
+
+  // ---- カテゴリ選択 → 母集団人数を自動入力 ----
+  // HYROX Chiba 2026の公式カテゴリ別参加人数（マスターデータ、大会ページより）
+  $('f-category').addEventListener('change', (e) => {
+    const opt = e.target.selectedOptions[0];
+    if (opt && opt.dataset.pop) {
+      $('f-pop').value = opt.dataset.pop;
+      renderAll();
+    }
+  });
+
+  $('theme-toggle').addEventListener('click', () => {
+    const root = document.documentElement;
+    const current = root.getAttribute('data-theme');
+    if (current === 'dark') { root.setAttribute('data-theme', 'light'); }
+    else if (current === 'light') { root.removeAttribute('data-theme'); }
+    else { root.setAttribute('data-theme', 'dark'); }
+  });
+
+  $('proceed-btn').addEventListener('click', () => {
+    $('input-phase').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  });
+
+  // ---- tabs: パターンA（数値入力）／パターンB（スクショ入力・Coming Soon）----
+  // パターンBは未実装のため、切り替えると開発中メッセージのみ表示する
+  (function () {
+    const btnA = $('tab-btn-a');
+    const btnB = $('tab-btn-b');
+    const panelB = $('tab-panel-b');
+    btnA.addEventListener('click', () => {
+      btnA.classList.add('active');
+      btnB.classList.remove('active');
+      panelB.hidden = true;
+    });
+    btnB.addEventListener('click', () => {
+      btnB.classList.add('active');
+      btnA.classList.remove('active');
+      panelB.hidden = false;
+    });
+  })();
+
+  renderAll();
+})();
+</script>
+</body>
+</html>
