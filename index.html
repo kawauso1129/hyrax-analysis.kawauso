@@ -720,9 +720,11 @@
       '（上位' + fmtPct(d.weakest.pct) + '）でした。'
     );
 
-    // ---- ここから先は、総合が種目平均より明確に良く（+3pt以上）、かつこのカテゴリの
-    // 全ランキングを実測している（＝密集帯データがある）場合のみ表示する「考察」パートです ----
-    if (gap >= 3 && densityCat) {
+    // ---- ここから先は、このカテゴリの全ランキングを実測している（＝密集帯データがある）
+    // 場合のみ表示する「考察」パートです。中身は団子状態の位置・ラン換算・種目の身体特徴と、
+    // いずれも総合と種目平均のギャップの正負に関わらず成り立つファクト・計算ベースの内容なので、
+    // gapの大小では出し分けません ----
+    if (densityCat) {
       {
         const band = findDensityBand(d.pop, d.total);
         paras.push(
@@ -936,6 +938,63 @@
       btnA.classList.remove('active');
       panelB.hidden = false;
     });
+  })();
+
+  // ---- 入力内容の自動保存／復元（localStorage）----
+  // リロードしてもフォームの入力が消えないようにする。書き込み/読み込みに失敗しても
+  // （プライベートブラウジング等）致命的にならないよう、必ずtry/catchで包む。
+  (function () {
+    const STORAGE_KEY = 'hyroxGapAnalysis.inputs.v1';
+    const PERSIST_FIELD_IDS = [
+      'f-race-name', 'f-category', 'f-pop', 'f-total',
+      'f-runs', 'f-skierg', 'f-sledpush', 'f-sledpull', 'f-bbj',
+      'f-row', 'f-fc', 'f-sl', 'f-wb', 'f-roxzone',
+      'f-include-roxzone',
+    ];
+
+    function persistInputs() {
+      try {
+        const data = {};
+        PERSIST_FIELD_IDS.forEach((id) => {
+          const el = $(id);
+          if (!el) return;
+          data[id] = (el.type === 'checkbox') ? el.checked : el.value;
+        });
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+      } catch (e) {
+        // localStorageが使えない環境（プライベートモード等）では保存をあきらめる
+      }
+    }
+
+    function restoreInputs() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (!raw) return false;
+        const saved = JSON.parse(raw);
+        let restoredAny = false;
+        PERSIST_FIELD_IDS.forEach((id) => {
+          if (!(id in saved)) return;
+          const el = $(id);
+          if (!el) return;
+          if (el.type === 'checkbox') { el.checked = !!saved[id]; }
+          else { el.value = saved[id]; }
+          restoredAny = true;
+        });
+        return restoredAny;
+      } catch (e) {
+        // 保存データが壊れている／localStorageが使えない場合はHTML側の初期値にフォールバック
+        return false;
+      }
+    }
+
+    PERSIST_FIELD_IDS.forEach((id) => {
+      const el = $(id);
+      if (!el) return;
+      const evt = (el.tagName === 'SELECT' || el.type === 'checkbox') ? 'change' : 'input';
+      el.addEventListener(evt, persistInputs);
+    });
+
+    window.__hyroxRestoredFromStorage = restoreInputs();
   })();
 
   renderAll();
