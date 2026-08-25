@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="ja">
 <head>
@@ -284,20 +285,31 @@
     #proceed-btn,
     .tab-row,
     .form-actions,
-    #pdf-btn {
+    #pdf-btn,
+    #input-phase {
       display: none !important;
     }
-    /* カード・グラフ・表がページの途中で分断されないようにする */
-    .card,
+    /* 小さな要素（見出し+値の組など）はページの途中で分断されないようにする。
+       ただし .card 自体は対象外にする — 「ギャップの考察」のような長いカードまで
+       丸ごと分断禁止にすると、ページ下部が大きく余ってその分だけ空白ページが
+       増えてしまうため（中の見出し/段落/表の行単位で分断禁止すれば十分）。 */
     .stat-tile,
     .hl-card,
     .stat-row,
     .highlight-row,
     #chart-svg,
     table.data-table tr,
-    #insight-text p {
+    #insight-text p,
+    #insight-text h2,
+    .card h2,
+    footer.note {
       break-inside: avoid;
       page-break-inside: avoid;
+    }
+    /* 見出しの直後で改ページされない（見出しだけ前ページに孤立しない）ようにする */
+    .card h2 {
+      break-after: avoid;
+      page-break-after: avoid;
     }
     .card {
       border: 1px solid #ddd;
